@@ -10,6 +10,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+
     steps:
       - name: Baixar projeto
         uses: actions/checkout@v4
@@ -20,14 +24,22 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Configurar Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Verificar Android SDK
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          ls -la "$ANDROID_HOME"
+          find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f
 
-      - name: Instalar SDK
-        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - name: Aceitar licencas e instalar SDK
+        run: |
+          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f | head -n 1)
+          yes | "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --licenses || true
+          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" "platforms;android-36" "build-tools;36.0.0"
 
       - name: Compilar APK
-        run: ./gradlew assembleDebug
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
 
       - name: Disponibilizar APK
         uses: actions/upload-artifact@v4
